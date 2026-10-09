@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Keymaster.Server/Keymaster.Server.csproj" />
+  <Project Path="Keymaster.Tests/Keymaster.Tests.csproj" />
+</Solution>

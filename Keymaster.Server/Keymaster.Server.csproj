@@ -1,0 +1,98 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Keymaster.Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <SptRef41Dir></SptRef41Dir>
+    <DefineConstants>$(DefineConstants);SPT41</DefineConstants>
+    <SptRefDir>$(SptRef41Dir)</SptRefDir>
+    <SptPackageVersion>4.1.3</SptPackageVersion>
+    <SptPackageId>SPTushonka.Server.Core</SptPackageId>
+    <SptReflectionPackageId>SPTushonka.Reflection</SptReflectionPackageId>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <SptRefsPresent>false</SptRefsPresent>
+    <SptRefsPresent Condition="Exists('$(SptRefDir)\SPTarkov.Server.Core.dll')">true</SptRefsPresent>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(SptRefsPresent)' != 'true'">
+    <PackageReference Include="$(SptPackageId)" Version="$(SptPackageVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="$(SptReflectionPackageId)" Version="$(SptPackageVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="SPTushonka.Server.Web" Version="$(SptPackageVersion)" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SptRefsPresent)' == 'true'">
+    <Reference Include="SPTarkov.Server.Core">
+      <HintPath>$(SptRefDir)\SPTarkov.Server.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Common">
+      <HintPath>$(SptRefDir)\SPTarkov.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.DI">
+      <HintPath>$(SptRefDir)\SPTarkov.DI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Reflection">
+      <HintPath>$(SptRefDir)\SPTarkov.Reflection.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SemanticVersioning">
+      <HintPath>$(SptRefDir)\SemanticVersioning.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Server.Web">
+      <HintPath>$(SptRefDir)\SPTarkov.Server.Web.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="ReportSptRefs" BeforeTargets="ResolveAssemblyReferences">
+    <Message Importance="high" Condition="'$(SptRefsPresent)' == 'true'"
+             Text="Keymaster.Server: referencing the install at $(SptRefDir)" />
+    <Message Importance="high" Condition="'$(SptRefsPresent)' != 'true'"
+             Text="Keymaster.Server: no install at $(SptRefDir), using $(SptPackageId) $(SptPackageVersion) from NuGet" />
+  </Target>
+
+  <Target Name="ValidateSptCoreFloor" BeforeTargets="ResolveAssemblyReferences" Condition="'$(SptRefsPresent)' == 'true'">
+    <GetAssemblyIdentity AssemblyFiles="$(SptRefDir)\SPTarkov.Server.Core.dll">
+      <Output TaskParameter="Assemblies" ItemName="SptCoreLocalAssembly" />
+    </GetAssemblyIdentity>
+
+    <PropertyGroup>
+      <SptCoreLocalVersionRaw>@(SptCoreLocalAssembly->'%(Version)')</SptCoreLocalVersionRaw>
+      <SptCoreLocalVersion>$(SptCoreLocalVersionRaw.Split('.')[0]).$(SptCoreLocalVersionRaw.Split('.')[1]).$(SptCoreLocalVersionRaw.Split('.')[2])</SptCoreLocalVersion>
+    </PropertyGroup>
+
+    <Error
+        Condition="$([MSBuild]::VersionGreaterThan('$(SptCoreLocalVersion)', '$(SptPackageVersion)'))"
+        Text="Keymaster.Server: the local install at $(SptRefDir) carries SPTarkov.Server.Core $(SptCoreLocalVersion), above the declared floor SptPackageVersion=$(SptPackageVersion). Building against it as-is would silently raise the mod's real minimum server version, since ModValidator.ValidateCoreAssemblyReference throws out of the mod loader on any server below the compile-time Core. Either raise SptPackageVersion (and ModMetadata.cs's SptVersion) to $(SptCoreLocalVersion) as a deliberate decision, or point SptRefDir at an install at or below $(SptPackageVersion)." />
+  </Target>
+
+  <ItemGroup>
+    <Content Update="config\config.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\db\keys-seed.json" Link="db\keys-seed.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\db\keys-seed.json')" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <KeymasterDist>$(MSBuildProjectDirectory)\..\dist\$(Configuration)\SPT_Runtime\user\mods\LennoxP90-Keymaster</KeymasterDist>
+  </PropertyGroup>
+
+  <Target Name="StageKeymasterServer" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath);$(OutDir)$(AssemblyName).deps.json" DestinationFolder="$(KeymasterDist)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="config\config.json" DestinationFolder="$(KeymasterDist)\config" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="..\db\keys-seed.json" DestinationFolder="$(KeymasterDist)\db" SkipUnchangedFiles="true" Condition="Exists('..\db\keys-seed.json')" />
+  </Target>
+
+</Project>

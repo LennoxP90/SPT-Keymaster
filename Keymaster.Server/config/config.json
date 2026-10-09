@@ -1,0 +1,4 @@
+{
+  "trader": { "priceRoubles": 2000000, "loyaltyLevel": 1 },
+  "gift": { "enabled": true, "resend": true }
+}
