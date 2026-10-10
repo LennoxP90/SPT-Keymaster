@@ -8,7 +8,7 @@
     <LangVersion>latest</LangVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Nullable>annotations</Nullable>
-    <PathMap>$(MSBuildProjectDirectory)=Keymaster.Client</PathMap>
+    <PathMap>$([MSBuild]::NormalizeDirectory($(MSBuildProjectDirectory), ..))=Keymaster\</PathMap>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -35,6 +35,14 @@
 
     <Reference Include="Assembly-CSharp">
       <HintPath>$(SptManaged)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ItemComponent.Types">
+      <HintPath>$(SptManaged)\ItemComponent.Types.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ItemTemplate.Types">
+      <HintPath>$(SptManaged)\ItemTemplate.Types.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Sirenix.Serialization">
