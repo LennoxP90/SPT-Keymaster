@@ -26,8 +26,9 @@ public class WireContractTests
   [Fact]
   public void Config_RoundTripsServerToClient()
   {
-    var s = new Keymaster.Server.Wire.ConfigResponse { Table = new() { ["woods"] = new() { "k" } } };
+    var s = new Keymaster.Server.Wire.ConfigResponse { Table = new() { ["woods"] = new() { "k" } }, Homes = new() { ["k"] = "woods" } };
     var c = Newtonsoft.Json.JsonConvert.DeserializeObject<Keymaster.Client.Wire.ConfigResponseC>(System.Text.Json.JsonSerializer.Serialize(s))!;
     Assert.Equal(new[] { "k" }, c.Table["woods"]);
+    Assert.Equal("woods", c.Homes["k"]);
   }
 }

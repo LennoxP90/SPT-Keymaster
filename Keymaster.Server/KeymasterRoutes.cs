@@ -19,7 +19,7 @@ public class KeymasterRoutes(JsonUtil jsonUtil, HttpResponseUtil httpResponseUti
         new RouteAction<EmptyRequestData>("/keymaster/config", async (url, info, sessionId, output, ct) =>
         {
           gift.CheckFor(sessionId);
-          return httpResponseUtil.NoBody(new ConfigResponse { Table = table.Table.ToDictionary(e => e.Key, e => e.Value) });
+          return httpResponseUtil.NoBody(new ConfigResponse { Table = table.Table.ToDictionary(e => e.Key, e => e.Value), Homes = table.Homes.ToDictionary(e => e.Key, e => e.Value) });
         }),
         new RouteAction<EmptyRequestData>("/keymaster/state/get", async (url, info, sessionId, output, ct) =>
           httpResponseUtil.NoBody(state.Get(sessionId))),

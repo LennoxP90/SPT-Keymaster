@@ -15,6 +15,7 @@ public class KeyTableService(ISptLogger<KeyTableService> logger, KeymasterStore 
   readonly object gate = new();
   KeysFile seed = new();
   public IReadOnlyDictionary<string, List<string>> Table { get; private set; } = new Dictionary<string, List<string>>();
+  public IReadOnlyDictionary<string, string> Homes { get; private set; } = new Dictionary<string, string>();
 
   public Task OnLoadAsync(CancellationToken cancellationToken)
   {
@@ -57,6 +58,7 @@ public class KeyTableService(ISptLogger<KeyTableService> logger, KeymasterStore 
       if (b.Transits != null) input.TransitTargets[name] = b.Transits.Where(t => t.Location != null).Select(t => t.Location!.ToLowerInvariant()).Distinct().ToList();
     }
     Table = KeyTable.Build(input);
+    Homes = KeyTable.Homes(input);
   }
 
   HashSet<string> KeyTemplates()

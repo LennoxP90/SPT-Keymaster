@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Keymaster.Client.Wire;
+using Keymaster.Shared;
 using Newtonsoft.Json;
 using SPT.Common.Http;
 
@@ -8,6 +9,7 @@ namespace Keymaster.Client
   public static class KeymasterApi
   {
     public static IReadOnlyDictionary<string, List<string>> Table = new Dictionary<string, List<string>>();
+    public static IReadOnlyDictionary<string, string> Homes = new Dictionary<string, string>();
     public static StateDtoC State = new StateDtoC();
     public static bool Available;
 
@@ -16,7 +18,9 @@ namespace Keymaster.Client
     {
       try
       {
-        Table = JsonConvert.DeserializeObject<ConfigResponseC>(RequestHandler.GetJson("/keymaster/config"))?.Table ?? new Dictionary<string, List<string>>();
+        var config = JsonConvert.DeserializeObject<ConfigResponseC>(RequestHandler.GetJson("/keymaster/config"));
+        Table = config?.Table ?? new Dictionary<string, List<string>>();
+        Homes = config?.Homes ?? new Dictionary<string, string>();
         State = JsonConvert.DeserializeObject<StateDtoC>(RequestHandler.GetJson("/keymaster/state/get")) ?? new StateDtoC();
         Available = true;
       }
@@ -26,6 +30,15 @@ namespace Keymaster.Client
         Plugin.Detail("config fetch failed: " + ex.Message);
       }
       return Available;
+    }
+
+    /// <summary>The key table's list for the map the case was last loaded for, in table order. Empty before the first load.</summary>
+    public static IReadOnlyList<string> CurrentMapKeys()
+    {
+      var current = State.CurrentMap;
+      if (current == null) return new string[0];
+      var at = current.IndexOf('@');
+      return KeyTable.Resolve(Table, at < 0 ? current : current.Substring(0, at), at < 0 ? null : current.Substring(at + 1));
     }
 
     public static void SaveState() => RequestHandler.PostJson("/keymaster/state/set", JsonConvert.SerializeObject(State));

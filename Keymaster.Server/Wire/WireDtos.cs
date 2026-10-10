@@ -6,6 +6,7 @@ namespace Keymaster.Server.Wire
   public class ConfigResponse
   {
     [JsonPropertyName("table")] public Dictionary<string, List<string>> Table { get; set; } = new();
+    [JsonPropertyName("homes")] public Dictionary<string, string> Homes { get; set; } = new();
   }
 
   public class StateDto

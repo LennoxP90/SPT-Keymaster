@@ -94,4 +94,47 @@ public class KeyTableTests
   {
     Assert.Empty(KeyTable.Resolve(new Dictionary<string, List<string>>(), "woods", null));
   }
+
+  static KeyTableInput Streets() => new KeyTableInput
+  {
+    Seed = File(("tarkovstreets", "x", new[] { "door" }), ("laboratory", "x", new string[0])),
+    KnownTpls = new HashSet<string> { "door", "labs", "streetsCard" },
+    TransitTargets = { ["tarkovstreets"] = new List<string> { "Laboratory" } },
+    AccessKeys = { ["laboratory"] = new List<string> { "labs" }, ["tarkovstreets"] = new List<string> { "streetsCard" } },
+  };
+
+  [Fact]
+  public void Homes_TransitCardHomesAtItsOwnMap()
+  {
+    var input = Streets();
+    Assert.Contains("labs", KeyTable.Build(input)["tarkovstreets"]);
+    var homes = KeyTable.Homes(input);
+    Assert.Equal("laboratory", homes["labs"]);
+    Assert.Equal("tarkovstreets", homes["streetsCard"]);
+    Assert.Equal("tarkovstreets", homes["door"]);
+  }
+
+  [Fact]
+  public void Homes_LearnedDoorKeyWinsOverAccessKey()
+  {
+    var input = Streets();
+    input.Learned = File(("tarkovstreets", "y", new[] { "labs" }));
+    Assert.Equal("tarkovstreets", KeyTable.Homes(input)["labs"]);
+  }
+
+  [Fact]
+  public void Homes_NoHomeIsAbsent()
+  {
+    var input = Streets();
+    input.AccessKeys.Remove("laboratory");
+    Assert.False(KeyTable.Homes(input).ContainsKey("labs"));
+  }
+
+  [Fact]
+  public void Homes_AccessKeyWithoutEntryHomesAtItsLocation()
+  {
+    var input = Streets();
+    input.Seed!.Entries.Remove("laboratory");
+    Assert.Equal("laboratory", KeyTable.Homes(input)["labs"]);
+  }
 }

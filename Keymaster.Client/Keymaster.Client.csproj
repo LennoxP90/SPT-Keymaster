@@ -77,6 +77,10 @@
       <HintPath>$(SptManaged)\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(SptManaged)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>$(SptManaged)\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>

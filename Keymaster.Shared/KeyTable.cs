@@ -29,7 +29,7 @@ namespace Keymaster.Shared
       return at < 0 ? entryKey : entryKey.Substring(0, at);
     }
 
-    public static Dictionary<string, List<string>> Build(KeyTableInput input)
+    static Dictionary<string, List<string>> Merge(KeyTableInput input)
     {
       var merged = new Dictionary<string, List<string>>();
       foreach (var file in new[] { input.Seed, input.Learned })
@@ -37,6 +37,25 @@ namespace Keymaster.Shared
         if (file == null) continue;
         foreach (var e in file.Entries) merged[e.Key] = e.Value.Keys.ToList();
       }
+      return merged;
+    }
+
+    /// <summary>Key tpl -> entry key of its home map: the first entry whose own seed/learned keys list it, else the first whose base location's own AccessKeys do, else the location whose own AccessKeys do even with no entry. Transit-added cards never make a home.</summary>
+    public static Dictionary<string, string> Homes(KeyTableInput input)
+    {
+      var merged = Merge(input);
+      var homes = new Dictionary<string, string>();
+      void Claim(string tpl, string entry) { if (input.KnownTpls.Contains(tpl) && !homes.ContainsKey(tpl)) homes[tpl] = entry; }
+      foreach (var e in merged) foreach (var tpl in e.Value) Claim(tpl, e.Key);
+      foreach (var e in merged)
+        if (input.AccessKeys.TryGetValue(BaseOf(e.Key), out var own)) foreach (var tpl in own) Claim(tpl, e.Key);
+      foreach (var e in input.AccessKeys) foreach (var tpl in e.Value) Claim(tpl, e.Key);
+      return homes;
+    }
+
+    public static Dictionary<string, List<string>> Build(KeyTableInput input)
+    {
+      var merged = Merge(input);
 
       var table = new Dictionary<string, List<string>>();
       foreach (var e in merged)

@@ -22,6 +22,9 @@ namespace Keymaster.Client
       new MenuBackPatch().Enable();
       new ContextMenuPatch().Enable();
       new AccessKeyPatch().Enable();
+      new UI.OpenItemPatch().Enable();
+      new UI.CloseWindowsPatch().Enable();
+      new UI.MergedUsesPatch().Enable();
     }
 
     public static void Log(string line) => _log.LogInfo("Keymaster: " + line);

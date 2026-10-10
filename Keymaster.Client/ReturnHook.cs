@@ -16,11 +16,7 @@ namespace Keymaster.Client
     public static async Task<string> Run(InventoryAdapter a)
     {
       if (a.Case == null) return null;
-      var current = KeymasterApi.State.CurrentMap;
-      var at = current?.IndexOf('@') ?? -1;
-      var keys = current == null ? new string[0]
-        : KeyTable.Resolve(KeymasterApi.Table, at < 0 ? current : current.Substring(0, at), at < 0 ? null : current.Substring(at + 1)).ToArray();
-      var wanted = keys.Concat(KeymasterApi.State.AlwaysBring).Distinct().ToList();
+      var wanted = KeymasterApi.CurrentMapKeys().Concat(KeymasterApi.State.AlwaysBring).Distinct().ToList();
       var home = ReturnPlanner.Plan(wanted, a.Copies().Where(x => x.Where == KeyHome.Case).ToList(), KeymasterSettings.Copy.Value);
       var moved = 0; var stuck = 0;
       foreach (var id in home) if (await a.MoveHome(id)) moved++; else stuck++;

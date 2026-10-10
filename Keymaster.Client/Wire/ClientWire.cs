@@ -6,6 +6,7 @@ namespace Keymaster.Client.Wire
   public sealed class ConfigResponseC
   {
     [JsonProperty("table")] public Dictionary<string, List<string>> Table { get; set; } = new Dictionary<string, List<string>>();
+    [JsonProperty("homes")] public Dictionary<string, string> Homes { get; set; } = new Dictionary<string, string>();
   }
 
   public sealed class StateDtoC
