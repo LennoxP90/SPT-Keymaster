@@ -1,12 +1,15 @@
+using Diz.LanguageExtensions;
 using System;
 using System.Linq;
 using EFT;
 using EFT.UI;
+using EFT.InventoryLogic;
 using EFT.UI.DragAndDrop;
 using HarmonyLib;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Keymaster.Shared;
 
 namespace Keymaster.Client.UI
 {
@@ -19,15 +22,18 @@ namespace Keymaster.Client.UI
 
     RectTransform _root, _content;
     TextMeshProUGUI _style;
-    Image _cellStyle;
-    float _viewH;
+    Image _cellStyle, _highlight;
+    GridView _gridTemplate;
+    Scrollbar _bar;
+    float _viewH, _barW;
 
     /// <summary>Takes the place of the window's (never shown) grid view; caption, close button, frame and dragging stay the window's.</summary>
     void Build(GridWindow window)
     {
       var grids = WindowGrids(window);
       _style = window.Caption;
-      _cellStyle = (grids as GeneratedGridsView)?._gridViewTemplate.transform.Find("Background Tile")?.GetComponent<Image>();
+      _gridTemplate = (grids as GeneratedGridsView)?._gridViewTemplate;
+      _cellStyle = _gridTemplate?.transform.Find("Background Tile")?.GetComponent<Image>();
       if (window._sortPanel != null) window._sortPanel.gameObject.SetActive(false);
 
       _root = (RectTransform)transform;
@@ -45,6 +51,33 @@ namespace Keymaster.Client.UI
       _content = (RectTransform)new GameObject("Content", typeof(RectTransform)).transform;
       _content.SetParent(_root, false);
       _content.anchorMin = _content.anchorMax = _content.pivot = new Vector2(0, 1);
+      _bar = Bar(window);
+    }
+
+    static bool Vertical(Scrollbar s) => s.direction == Scrollbar.Direction.BottomToTop || s.direction == Scrollbar.Direction.TopToBottom;
+
+    /// <summary>A copy of the game's own vertical scrollbar (the window's, else any loaded one), driven by the panel's rows.</summary>
+    Scrollbar Bar(GridWindow window)
+    {
+      var template = window.GetComponentsInChildren<Scrollbar>(true).FirstOrDefault(Vertical)
+        ?? Resources.FindObjectsOfTypeAll<Scrollbar>().Where(Vertical).OrderByDescending(s => s.gameObject.scene.IsValid()).FirstOrDefault();
+      if (template == null) { Plugin.Detail("panel: no stock scrollbar found, wheel only"); return null; }
+      var bar = Instantiate(template.gameObject, _root, false).GetComponent<Scrollbar>();
+      bar.name = "Scrollbar";
+      bar.onValueChanged = new Scrollbar.ScrollEvent();
+      bar.onValueChanged.AddListener(v => OnBar(FromTop(bar, v)));
+      bar.numberOfSteps = 0;
+      var w = ((RectTransform)template.transform).rect.width;
+      _barW = w >= 4 && w <= 24 ? w : 12;
+      return bar;
+    }
+
+    /// <summary>Bar value to 0-at-top position, and back: a BottomToTop bar is 1 at the top.</summary>
+    static float FromTop(Scrollbar bar, float v) => bar.direction == Scrollbar.Direction.BottomToTop ? 1 - v : v;
+
+    void SyncBar(float position)
+    {
+      if (_bar != null && _bar.gameObject.activeSelf) _bar.SetValueWithoutNotify(FromTop(_bar, position));
     }
 
     /// <summary>The name the map screen shows for a location id (LocationSettings.Location.LocalizedName), in the game's language.</summary>
@@ -127,6 +160,34 @@ namespace Keymaster.Client.UI
       return cell;
     }
 
+    /// <summary>A stock grid's drop highlight: its panel sprite and GridView.GetHighlightColor for the operation.</summary>
+    void ShowHighlight(int col, float y, int cells, OperationResult operation, DragItemContext itemContext, ItemContext target)
+    {
+      if (_highlight == null)
+      {
+        _highlight = new GameObject("Highlight", typeof(RectTransform)).AddComponent<Image>();
+        _highlight.transform.SetParent(_content, false);
+        _highlight.raycastTarget = false;
+        var style = _gridTemplate?._highlightPanel;
+        if (style != null)
+        {
+          _highlight.sprite = style.sprite;
+          _highlight.type = style.type;
+          _highlight.material = style.material;
+        }
+      }
+      _highlight.color = _gridTemplate != null ? _gridTemplate.GetHighlightColor(itemContext, operation, target)
+        : operation.Succeeded ? new Color(0.06f, 0.38f, 0.06f, 0.57f) : new Color(0.68f, 0f, 0f, 0.57f);
+      Place(_highlight.rectTransform, col * Cell, y, cells * Cell, Cell);
+      _highlight.transform.SetAsLastSibling();
+      _highlight.gameObject.SetActive(true);
+    }
+
+    public void DisableHighlight()
+    {
+      if (_highlight != null) _highlight.gameObject.SetActive(false);
+    }
+
     void PlaceView(ItemView v, int col, float y)
     {
       var rt = (RectTransform)v.transform;
@@ -143,7 +204,14 @@ namespace Keymaster.Client.UI
     {
       _content.sizeDelta = new Vector2(Cols * Cell, contentHeight);
       _viewH = Mathf.Clamp(contentHeight, Cell, MaxView);
-      var size = new Vector2(Cols * Cell, _viewH);
+      var bar = _bar != null && ScrollBarMath.Needed(_viewH, contentHeight);
+      var size = new Vector2(Cols * Cell + (bar ? _barW : 0), _viewH);
+      if (_bar != null)
+      {
+        _bar.gameObject.SetActive(bar);
+        Place((RectTransform)_bar.transform, Cols * Cell, 0, _barW, _viewH);
+        _bar.size = ScrollBarMath.Size(_viewH, contentHeight);
+      }
       _root.sizeDelta = size;
       var layout = GetComponent<LayoutElement>();
       layout.preferredWidth = layout.minWidth = size.x;

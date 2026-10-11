@@ -30,16 +30,4 @@ namespace Keymaster.Client.UI
     [PatchPrefix]
     static bool Prefix(GridWindow __instance) => !KeymasterPanel.Hosts(Item(__instance));
   }
-
-  /// <summary>The case and the vault are never the priority (quick-transfer) window: their hidden grids are not quick-move targets.</summary>
-  public class PriorityWindowPatch : ModulePatch
-  {
-    protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(GridWindowContext), nameof(GridWindowContext.CanSelectGridWindow));
-
-    [PatchPostfix]
-    static void Postfix(ItemContext itemContext, ref bool __result)
-    {
-      if (__result && KeymasterPanel.Hosts(itemContext.Item)) __result = false;
-    }
-  }
 }

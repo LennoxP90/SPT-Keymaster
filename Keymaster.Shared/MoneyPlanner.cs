@@ -27,12 +27,18 @@ namespace Keymaster.Shared
 
   public static class MoneyPlanner
   {
-    /// <summary>A target is 0 to one full stack.</summary>
-    public static int ClampTarget(string currencyTpl, int target) => Math.Max(0, Math.Min(target, KeymasterIds.StackCap(currencyTpl)));
+    /// <summary>A target is 0 to the game's lobby limit.</summary>
+    public static int ClampTarget(string currencyTpl, int target) => Math.Max(0, Math.Min(target, KeymasterIds.MoneyCap(currencyTpl)));
 
-    public static MoneyPlan Plan(string currencyTpl, int target, int inCell, IReadOnlyList<StackRef> stashStacks)
+    /// <summary>Ctrl-click of a money stack into the case: the whole stack, or only the room left under the cap; 0 when full.</summary>
+    public static int QuickTransferAmount(int cellCount, int stackCount, int cap, int carriedElsewhere = 0) =>
+      Math.Max(0, Math.Min(stackCount, cap - cellCount - carriedElsewhere));
+
+    /// <summary>carriedElsewhere: the currency already in the equipment outside the cell; the top-up never takes the
+    /// total past the lobby limit.</summary>
+    public static MoneyPlan Plan(string currencyTpl, int target, int inCell, IReadOnlyList<StackRef> stashStacks, int carriedElsewhere = 0)
     {
-      var goal = ClampTarget(currencyTpl, target);
+      var goal = Math.Min(ClampTarget(currencyTpl, target), Math.Max(0, KeymasterIds.MoneyCap(currencyTpl) - carriedElsewhere));
       var plan = new MoneyPlan();
       if (inCell > goal) { plan.Excess = inCell - goal; return plan; }
 

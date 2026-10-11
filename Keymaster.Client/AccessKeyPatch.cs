@@ -22,8 +22,8 @@ namespace Keymaster.Client
     static void Postfix(MainMenuShowOperation __instance, IEnumerable<string> accessKeys, EquipmentSlot? specialSlot, ref string keyId, ref bool __result)
     {
       if (__result || specialSlot.HasValue || !KeymasterApi.Available) return;
-      var a = new InventoryAdapter(__instance.InventoryController);
-      if (a.Case == null) return;
+      var a = InventoryAdapter.For(__instance.InventoryController);
+      if (a?.Case == null) return;
       var copies = a.Copies();
       var pick = accessKeys.Distinct().ToList()
         .Select(tpl => copies.FirstOrDefault(c => c.ItemId == LoadPlanner.Plan(new[] { tpl }, copies, KeymasterSettings.Copy.Value, false).ToCase.FirstOrDefault()))

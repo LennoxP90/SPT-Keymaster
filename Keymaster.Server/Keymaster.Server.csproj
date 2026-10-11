@@ -5,6 +5,7 @@
     <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PathMap>$([MSBuild]::NormalizeDirectory($(MSBuildProjectDirectory), ..))=Keymaster\</PathMap>
   </PropertyGroup>
 
   <ItemGroup>

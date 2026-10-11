@@ -17,7 +17,7 @@ public class KeymasterItems(ISptLogger<KeymasterItems> logger, CustomItemService
   public Task OnLoadAsync(CancellationToken cancellationToken)
   {
     var ok = Create(KeymasterIds.CaseTpl, KeymasterIds.SiccTpl, "keymaster_case", "Keymaster's Case", "KM Case",
-                 "Carries the keys for the map you deploy to, plus your raid money. Goes in the secure container.",
+                 "Carries the keys for the map you deploy to, plus your raid money.",
                  2, 1, ModelBundles.CasePath, CaseGrids())
           & Create(KeymasterIds.VaultTpl, KeymasterIds.KeyCaseTpl, "keymaster_vault", "Keymaster's Vault", "KM Vault",
                  "Stores your whole key collection. Stays in the stash.",

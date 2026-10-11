@@ -1,18 +1,22 @@
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using Keymaster.Shared;
 
 namespace Keymaster.Client
 {
-  [BepInPlugin("com.lennoxp90.keymaster", "Keymaster", "0.1.0")]
+  [BepInPlugin("com.lennoxp90.keymaster", "Keymaster", "1.0.0")]
+  [BepInDependency(FikaHeadlessGuid, BepInDependency.DependencyFlags.SoftDependency)]
   public class Plugin : BaseUnityPlugin
   {
+    const string FikaHeadlessGuid = "com.fika.headless";
     static ManualLogSource _log;
 
     void Awake()
     {
       _log = Logger;
+      if (Chainloader.PluginInfos.ContainsKey(FikaHeadlessGuid)) { Log("headless detected; Keymaster is off"); return; }
       KeymasterSettings.Bind(Config);
       if (!KeymasterApi.Refresh(initial: true)) { Log("server half not found; Keymaster is off"); return; }
       new LearnPatch().Enable();
@@ -24,7 +28,8 @@ namespace Keymaster.Client
       new AccessKeyPatch().Enable();
       new UI.WindowShowPatch().Enable();
       new UI.WindowGridsPatch().Enable();
-      new UI.PriorityWindowPatch().Enable();
+      new UI.QuickMoneyPatch().Enable();
+      new UI.CaseIconMoneyPatch().Enable();
       new UI.PickupCap().Enable();
       new UI.MergedUsesPatch().Enable();
       new ShaderRebind().Enable();

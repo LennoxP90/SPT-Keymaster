@@ -22,14 +22,16 @@ namespace Keymaster.Shared
     /// <summary>Case grid order after the key grid. Index i is grid i + 1.</summary>
     public static readonly string[] Currencies = { Rub, Usd, Eur, Gp };
 
-    public static int StackCap(string currencyTpl)
+    /// <summary>The most of a currency a PMC may carry into a raid: the game's lobby limit
+    /// (globals RestrictionsInRaid MaxInLobby). Above it the game refuses the raid.</summary>
+    public static int MoneyCap(string currencyTpl)
     {
       switch (currencyTpl)
       {
-        case Rub: return 1000000;
-        case Usd: return 50000;
-        case Eur: return 50000;
-        case Gp: return 100;
+        case Rub: return 500000;
+        case Usd: return 8000;
+        case Eur: return 8000;
+        case Gp: return 10;
         default: return 0;
       }
     }

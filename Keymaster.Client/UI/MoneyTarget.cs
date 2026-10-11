@@ -13,7 +13,7 @@ namespace Keymaster.Client.UI
     {
       var dialog = ItemUiContext.Instance?.SplitDialog;
       if (dialog == null) return;
-      var cap = KeymasterIds.StackCap(currencyTpl);
+      var cap = KeymasterIds.MoneyCap(currencyTpl);
       var current = KeymasterSettings.Target(currencyTpl);
       dialog.Show(Title(currencyTpl), 0, cap, 0, cap, current, Input.mousePosition, value =>
       {

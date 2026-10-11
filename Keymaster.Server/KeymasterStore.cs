@@ -58,7 +58,7 @@ public class KeymasterStore
       s.CurrentMap = dto.CurrentMap;
       s.AlwaysBring = dto.AlwaysBring ?? new List<string>();
       s.MoneyTargets = (dto.MoneyTargets ?? new Dictionary<string, int>())
-        .Where(t => KeymasterIds.StackCap(t.Key) > 0)
+        .Where(t => KeymasterIds.MoneyCap(t.Key) > 0)
         .ToDictionary(t => t.Key, t => MoneyPlanner.ClampTarget(t.Key, t.Value));
       return true;
     });

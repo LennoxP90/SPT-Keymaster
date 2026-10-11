@@ -11,7 +11,26 @@ namespace Keymaster.Client
   public sealed class InventoryAdapter
   {
     readonly InventoryController ic;
-    public InventoryAdapter(InventoryController ic) { this.ic = ic; }
+    InventoryAdapter(InventoryController ic) { this.ic = ic; }
+
+    /// <summary>Null when there is no controller, or when the game's item reads cannot be trusted this session.</summary>
+    public static InventoryAdapter For(InventoryController ic) => ic != null && Trusted ? new InventoryAdapter(ic) : null;
+
+    static bool? trusted;
+    /// <summary>Checked on first use, not at Awake: the game sets JsonConvert.DefaultSettings only at BeforeSceneLoad.</summary>
+    static bool Trusted
+    {
+      get
+      {
+        if (trusted == null)
+        {
+          var warn = InventoryTrust.StandDown(Newtonsoft.Json.JsonConvert.DefaultSettings != null);
+          trusted = warn == null;
+          if (warn != null) Plugin.Warn(warn);
+        }
+        return trusted.Value;
+      }
+    }
 
     public CompoundItem Case => ic.Inventory.Equipment.GetSlot(EquipmentSlot.SecuredContainer).ContainedItem?
       .GetAllItems().OfType<CompoundItem>().FirstOrDefault(i => i.StringTemplateId == KeymasterIds.CaseTpl);
@@ -109,6 +128,10 @@ namespace Keymaster.Client
         .Select(i => new StackRef { ItemId = i.Id, Count = i.StackObjectsCount }).ToList();
 
     public int InCell(int gridIndex) => Case?.Grids[gridIndex].Items.Sum(i => i.StackObjectsCount) ?? 0;
+
+    /// <summary>The currency anywhere in the equipment (secure container included) outside the case's cell.</summary>
+    public int CarriedOutsideCell(string currencyTpl, int gridIndex) =>
+      ic.Inventory.GetPlayerItems(EPlayerItems.Equipment).Where(i => i.StringTemplateId == currencyTpl).Sum(i => i.StackObjectsCount) - InCell(gridIndex);
 
     /// <summary>Moves (or splits off) each planned amount into the currency cell. Returns the amount moved.</summary>
     public async Task<int> TopUp(MoneyPlan plan, int gridIndex)

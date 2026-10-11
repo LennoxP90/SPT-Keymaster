@@ -30,10 +30,25 @@ public class MoneyPlannerTests
   }
 
   [Fact]
-  public void TargetClampedToOneStack()
+  public void TargetClampedToTheLobbyLimit()
   {
     var p = MoneyPlanner.Plan(KeymasterIds.Gp, 500, 0, new[] { S("g", 400) });
-    Assert.Equal(100, p.TopUp.Sum(m => m.Count));
+    Assert.Equal(10, p.TopUp.Sum(m => m.Count));
+  }
+
+  [Fact]
+  public void TopUp_StopsAtTheLimitCountingMoneyCarriedElsewhere()
+  {
+    var p = MoneyPlanner.Plan(KeymasterIds.Rub, 80000, 0, new[] { S("stash", 400000000) }, carriedElsewhere: 486800);
+    Assert.Equal(13200, p.TopUp.Sum(m => m.Count));
+    Assert.Equal(0, p.Shortfall);
+  }
+
+  [Fact]
+  public void TopUp_NothingWhenCarriedElsewhereIsAlreadyAtTheLimit()
+  {
+    var p = MoneyPlanner.Plan(KeymasterIds.Rub, 80000, 0, new[] { S("stash", 400000000) }, carriedElsewhere: 600000);
+    Assert.Empty(p.TopUp);
   }
 
   [Fact]
@@ -46,10 +61,12 @@ public class MoneyPlannerTests
 public class MoneyTargetTests
 {
   [Fact]
-  public void ClampTarget_KeepsWithinOneStack()
+  public void ClampTarget_KeepsWithinTheGamesLobbyLimit()
   {
-    Assert.Equal(1000000, MoneyPlanner.ClampTarget(KeymasterIds.Rub, 5000000));
-    Assert.Equal(100, MoneyPlanner.ClampTarget(KeymasterIds.Gp, 101));
+    Assert.Equal(500000, MoneyPlanner.ClampTarget(KeymasterIds.Rub, 5000000));
+    Assert.Equal(8000, MoneyPlanner.ClampTarget(KeymasterIds.Usd, 9000));
+    Assert.Equal(8000, MoneyPlanner.ClampTarget(KeymasterIds.Eur, 9000));
+    Assert.Equal(10, MoneyPlanner.ClampTarget(KeymasterIds.Gp, 101));
     Assert.Equal(0, MoneyPlanner.ClampTarget(KeymasterIds.Usd, -5));
     Assert.Equal(8000, MoneyPlanner.ClampTarget(KeymasterIds.Rub, 8000));
   }

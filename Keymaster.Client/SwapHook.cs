@@ -32,7 +32,7 @@ namespace Keymaster.Client
         var cur = KeymasterIds.Currencies[i];
         var target = KeymasterSettings.Target(cur);
         if (target <= 0) continue;
-        var mp = MoneyPlanner.Plan(cur, target, a.InCell(i + 1), a.StashStacks(cur));
+        var mp = MoneyPlanner.Plan(cur, target, a.InCell(i + 1), a.StashStacks(cur), a.CarriedOutsideCell(cur, i + 1));
         var added = await a.TopUp(mp, i + 1);
         if (added > 0) money += $", {Code(cur)} +{added}";
         if (mp.Shortfall > 0) money += $" ({mp.Shortfall} short)";
@@ -48,7 +48,7 @@ namespace Keymaster.Client
     internal static InventoryAdapter MenuInventory(TarkovApplication app)
     {
       var menu = AccessTools.Field(typeof(TarkovApplication), "_menuOperation").GetValue(app) as MainMenuShowOperation;
-      return menu?.InventoryController == null ? null : new InventoryAdapter(menu.InventoryController);
+      return InventoryAdapter.For(menu?.InventoryController);
     }
   }
 

@@ -1,0 +1,175 @@
+@page "/keymaster"
+@* Administrator, matching COTI and every other page that writes config or profile state. *@
+@attribute [Authorize(Policy = "Administrator")]
+@layout SPTarkov.Server.Web.Layout.BaseMudBlazorLayout
+
+@inject KeymasterServerConfig Config
+@inject KeymasterTraderAssort TraderAssort
+@inject KeymasterGift Gift
+@inject KeymasterVaultHolders Holders
+@inject IDialogService Dialogs
+
+<PageTitle>Keymaster</PageTitle>
+
+<MudMainContent>
+  <MudContainer MaxWidth="MaxWidth.Medium" Class="pa-6">
+
+    <MudPaper Class="pa-6 mb-4" Elevation="4">
+      <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <div>
+          <MudText Typo="Typo.h4">Keymaster</MudText>
+          <MudText Typo="Typo.body2" Class="mud-text-secondary">KM Case and KM Vault</MudText>
+        </div>
+        <MudStack Row="true" Spacing="2">
+          <MudButton StartIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined"
+                     Color="Color.Default" OnClick="Reload">Reload</MudButton>
+          <MudButton StartIcon="@Icons.Material.Filled.Save" Variant="Variant.Filled"
+                     Color="Color.Primary" OnClick="Save" Disabled="@(!dirty)">Save changes</MudButton>
+        </MudStack>
+      </MudStack>
+    </MudPaper>
+
+    @if (message is not null)
+    {
+      <MudAlert Severity="@severity" Class="mb-4" ShowCloseIcon="true"
+                CloseIconClicked="@(() => message = null)">@message</MudAlert>
+    }
+
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+      @Header("Trader", "Therapist's offer for the KM Case. Applied to the running server on save; relaunch the game client to see it.")
+      <MudNumericField T="int" Label="Loyalty level" Min="1" Max="4" Variant="Variant.Outlined"
+                       Value="@file.Trader.LoyaltyLevel" ValueChanged="@(v => Set(() => file.Trader.LoyaltyLevel = v))" />
+      <MudNumericField T="int" Label="Price (RUB)" Min="1" Variant="Variant.Outlined" Class="mt-4"
+                       Value="@file.Trader.PriceRoubles" ValueChanged="@(v => Set(() => file.Trader.PriceRoubles = v))" />
+    </MudPaper>
+
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+      @Header("Vault gift", "Mailed on login to a profile with no KM Vault. Applies on the next login.")
+      <MudSwitch T="bool" Color="Color.Primary" Label="Send the vault gift"
+                 Value="@file.Gift.Enabled" ValueChanged="@(v => Set(() => file.Gift.Enabled = v))" />
+      <MudSwitch T="bool" Color="Color.Primary" Label="Resend once the 30-day mail has expired" Class="mt-2"
+                 Value="@file.Gift.Resend" ValueChanged="@(v => Set(() => file.Gift.Resend = v))" />
+    </MudPaper>
+
+    <MudPaper Class="pa-6" Elevation="2">
+      <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        @Header("Vault holders", "Every profile on the server. Resend mails a vault to a profile that holds none.")
+        <MudButton StartIcon="@Icons.Material.Filled.Send" Variant="Variant.Outlined" Color="Color.Warning"
+                   OnClick="ResendAll" Disabled="@(!rows.Any(CanResend))">Resend to everyone without a vault</MudButton>
+      </MudStack>
+      <MudSimpleTable Dense="true" Hover="true">
+        <thead>
+          <tr><th>Profile</th><th>Level</th><th>KM Vault</th><th>Gift in mail</th><th>Last sent</th><th></th></tr>
+        </thead>
+        <tbody>
+          @foreach (var row in rows)
+          {
+            <tr>
+              <td>@row.Nickname</td>
+              <td>@(row.HasCharacter ? row.Level : "-")</td>
+              <td>@(row.HoldsVault ? "Yes" : "No")</td>
+              <td>@(row.GiftWaiting ? "Waiting" : "-")</td>
+              <td>@(row.GiftSentAt is { } at ? DateTimeOffset.FromUnixTimeSeconds(at).ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "Never")</td>
+              <td>
+                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                           Disabled="@(!CanResend(row))" OnClick="@(() => Resend(row))">Resend vault</MudButton>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </MudSimpleTable>
+    </MudPaper>
+
+  </MudContainer>
+</MudMainContent>
+
+@code {
+  private KeymasterConfigFile file = new();
+  private List<VaultHolderRow> rows = new();
+  private bool dirty;
+  private string? message;
+  private Severity severity = Severity.Success;
+
+  protected override void OnInitialized()
+  {
+    file = Config.ReadFromDisk();
+    rows = Holders.List();
+  }
+
+  private static bool CanResend(VaultHolderRow row) => row.HasCharacter && !row.HoldsVault;
+
+  private RenderFragment Header( string title, string note ) => @<div class="mb-4">
+      <MudText Typo="Typo.h6">@title</MudText>
+      <MudText Typo="Typo.body2" Class="mud-text-secondary">@note</MudText>
+    </div>;
+
+  private void Set( Action assign )
+  {
+    assign();
+    dirty = true;
+  }
+
+  private void Show( string text, Severity level )
+  {
+    message = text;
+    severity = level;
+  }
+
+  private void Reload()
+  {
+    file = Config.ReadFromDisk();
+    rows = Holders.List();
+    dirty = false;
+    Show( "Reloaded from config.json and the profiles. Unsaved changes discarded.", Severity.Info );
+  }
+
+  private async Task Save()
+  {
+    bool written;
+
+    // A read-only or locked config.json throws out of the handler.
+    try
+    {
+      written = await Config.SaveToDiskAsync( file );
+    }
+    catch( Exception ex )
+    {
+      Show( $"config.json could not be written: {ex.Message}", Severity.Error );
+      return;
+    }
+
+    if( !written )
+    {
+      Show( "Could not resolve the mod folder, so config.json was not written.", Severity.Error );
+      return;
+    }
+
+    Config.Apply( file );
+    var applied = TraderAssort.ApplyConfig();
+    dirty = false;
+    Show( applied
+        ? "Saved and applied. Relaunch the game client to see the trader change; the gift settings apply on the next login."
+        : "Saved, but the trader assort could not be reached, so the trader values take effect on restart.",
+      applied ? Severity.Success : Severity.Warning );
+  }
+
+  private void Resend( VaultHolderRow row )
+  {
+    var sent = Gift.Resend( row.ProfileId );
+    rows = Holders.List();
+    Show( sent ? $"Vault mailed to {row.Nickname}." : $"No vault mailed to {row.Nickname}: the profile already holds one, or the mail failed (see the server log).",
+      sent ? Severity.Success : Severity.Warning );
+  }
+
+  private async Task ResendAll()
+  {
+    var targets = rows.Where( CanResend ).ToList();
+    var ok = await Dialogs.ShowMessageBoxAsync( "Resend vaults",
+      $"Mail a KM Vault to {targets.Count} profile(s) without one?", yesText: "Resend", cancelText: "Cancel" );
+    if( ok != true ) return;
+
+    var sent = targets.Count( r => Gift.Resend( r.ProfileId ) );
+    rows = Holders.List();
+    Show( $"Vault mailed to {sent} of {targets.Count} profile(s).", sent == targets.Count ? Severity.Success : Severity.Warning );
+  }
+}
