@@ -8,7 +8,7 @@ using SPT.Reflection.Patching;
 
 namespace Keymaster.Client.UI
 {
-  /// <summary>In the case panel, a key's view shows the summed uses of every copy of that key in the case.</summary>
+  /// <summary>In the case panel, a key's view shows the summed uses of every copy of that key in the case, in the stock key format (left/max).</summary>
   public class MergedUsesPatch : ModulePatch
   {
     protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(GridItemView), nameof(GridItemView.UpdateInfo));
@@ -22,7 +22,9 @@ namespace Keymaster.Client.UI
       var copies = panel.CopiesOf(item.StringTemplateId);
       if (copies.Count < 2) return;
       var sum = MergedUses.Sum(copies.Select(InventoryAdapter.UsesLeft));
-      __instance.CurrentItemValue = sum.HasValue ? sum.Value.ToString() : string.Empty;
+      if (!sum.HasValue) { __instance.UpdateItemValue(string.Empty); return; }
+      var max = copies.Sum(c => c.GetItemComponent<KeyComponent>().Template.MaximumNumberOfUsage);
+      __instance.SetItemValue(GridItemView.EItemValueFormat.TwoValues, __instance.Examined, "#ff5335", sum.Value, max);
     }
   }
 }

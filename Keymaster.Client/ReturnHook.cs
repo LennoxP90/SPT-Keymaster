@@ -13,10 +13,10 @@ namespace Keymaster.Client
 {
   public static class Returner
   {
-    public static async Task<string> Run(InventoryAdapter a)
+    public static async Task<(string Line, bool Warn)> Run(InventoryAdapter a)
     {
-      if (a.Case == null) return null;
-      var wanted = KeymasterApi.CurrentMapKeys().Concat(KeymasterApi.State.AlwaysBring).Distinct().ToList();
+      if (a.Case == null) return (null, false);
+      var wanted = KeymasterApi.WantedKeys();
       var home = ReturnPlanner.Plan(wanted, a.Copies().Where(x => x.Where == KeyHome.Case).ToList(), KeymasterSettings.Copy.Value);
       var moved = 0; var stuck = 0;
       foreach (var id in home) if (await a.MoveHome(id)) moved++; else stuck++;
@@ -28,8 +28,8 @@ namespace Keymaster.Client
         var mp = MoneyPlanner.Plan(cur, KeymasterSettings.Target(cur), a.InCell(i + 1), new StackRef[0]);
         if (mp.Excess > 0 && await a.ReturnExcess(cur, mp.Excess, i + 1)) money += $", {Swapper.Code(cur)} -{mp.Excess}";
       }
-      if (moved == 0 && stuck == 0 && money.Length == 0) return null;
-      return $"returned {moved} keys" + (stuck > 0 ? $", {stuck} left in the case (no room)" : "") + money;
+      if (moved == 0 && stuck == 0 && money.Length == 0) return (null, false);
+      return ($"returned {moved} keys" + (stuck > 0 ? $", {stuck} left in the case (no room)" : "") + money, stuck > 0);
     }
 
     /// <summary>Runs the return on the menu inventory, logs its line and sends the moves to the server.</summary>
@@ -41,9 +41,9 @@ namespace Keymaster.Client
         var a = Swapper.MenuInventory(app);
         for (var i = 0; i < 50 && a?.HasStash != true; i++) { await Task.Delay(200); a = Swapper.MenuInventory(app); }
         if (a?.HasStash != true) { Plugin.Warn("no menu stash to return to"); return; }
-        var line = await Run(a);
+        var (line, warn) = await Run(a);
         if (line == null) return;
-        Plugin.Log(line + " (" + why + ")");
+        Plugin.Report((line + " (" + why + ")", warn));
         var sent = await app.Session.FlushOperationQueue();
         if (!sent.Succeed) Plugin.Warn("the server did not confirm the return: " + sent.Error);
       }
@@ -81,10 +81,10 @@ namespace Keymaster.Client
     }
   }
 
-  /// <summary>Keymaster entries on item context menus: Dump excess on the equipped case, always-bring on keys.</summary>
+  /// <summary>Keymaster entries on item context menus: dump excess on the equipped case, always-bring on keys, set target on the case's money.</summary>
   public class ContextMenuPatch : ModulePatch
   {
-    const string Dump = "Keymaster: dump excess", Bring = "Keymaster: bring on every map", Stop = "Keymaster: stop bringing";
+    const string Dump = "Dump excess", Bring = "Bring on every map", Stop = "Stop bringing", Target = "Set target";
 
     protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(ItemUiContext), nameof(ItemUiContext.GetItemContextInteractions));
 
@@ -93,13 +93,15 @@ namespace Keymaster.Client
     {
       var item = itemContext?.Item;
       if (__result == null || item == null) return;
-      foreach (var key in new[] { Dump, Bring, Stop }) __result.RemoveDynamicInteraction(key);
+      foreach (var key in new[] { Dump, Bring, Stop, Target }) __result.RemoveDynamicInteraction(key);
 
-      if (item.StringTemplateId == KeymasterIds.CaseTpl && IsMenuCase(item))
+      var tpl = item.StringTemplateId;
+      if (tpl == KeymasterIds.CaseTpl && IsMenuCase(item))
         __result.method_2("keymaster.dump", Dump, () => _ = Returner.RunOnMenu("dump excess"));
+      else if (KeymasterIds.Currencies.Contains(tpl) && item.Parent?.Container?.ParentItem?.StringTemplateId == KeymasterIds.CaseTpl)
+        __result.method_2("keymaster.target", Target, () => UI.MoneyTarget.Ask(tpl));
       else if (item.GetItemComponent<KeyComponent>() != null)
       {
-        var tpl = item.StringTemplateId;
         var always = KeymasterApi.State.AlwaysBring;
         if (always.Contains(tpl)) __result.method_2("keymaster.stop", Stop, () => { always.Remove(tpl); KeymasterApi.SaveState(); });
         else __result.method_2("keymaster.bring", Bring, () => { always.Add(tpl); KeymasterApi.SaveState(); });

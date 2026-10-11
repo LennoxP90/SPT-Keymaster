@@ -42,3 +42,15 @@ public class MoneyPlannerTests
     Assert.Equal(700, MoneyPlanner.Plan(KeymasterIds.Usd, 0, 700, new StackRef[0]).Excess);
   }
 }
+
+public class MoneyTargetTests
+{
+  [Fact]
+  public void ClampTarget_KeepsWithinOneStack()
+  {
+    Assert.Equal(1000000, MoneyPlanner.ClampTarget(KeymasterIds.Rub, 5000000));
+    Assert.Equal(100, MoneyPlanner.ClampTarget(KeymasterIds.Gp, 101));
+    Assert.Equal(0, MoneyPlanner.ClampTarget(KeymasterIds.Usd, -5));
+    Assert.Equal(8000, MoneyPlanner.ClampTarget(KeymasterIds.Rub, 8000));
+  }
+}

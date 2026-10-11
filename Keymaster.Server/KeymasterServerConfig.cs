@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Keymaster.Shared;
 using SPTarkov.DI.Annotations;
 
 namespace Keymaster.Server;

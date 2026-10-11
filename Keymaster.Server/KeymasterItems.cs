@@ -8,7 +8,7 @@ using SPTarkov.Server.Core.Models.Spt.Mod;
 namespace Keymaster.Server;
 
 [Injectable(TypePriority = KeymasterLoadOrder.Items)]
-public class KeymasterItems(ISptLogger<KeymasterItems> logger, CustomItemService customItems) : IOnLoad
+public class KeymasterItems(ISptLogger<KeymasterItems> logger, CustomItemService customItems, KeymasterServerConfig config) : IOnLoad
 {
   const string HandbookContainers = "5b5f6fa186f77409407a7eb7";
   const string SimpleContainerClass = "5795f317245977243854e041";
@@ -18,15 +18,15 @@ public class KeymasterItems(ISptLogger<KeymasterItems> logger, CustomItemService
   {
     var ok = Create(KeymasterIds.CaseTpl, KeymasterIds.SiccTpl, "keymaster_case", "Keymaster's Case", "KM Case",
                  "Carries the keys for the map you deploy to, plus your raid money. Goes in the secure container.",
-                 2, 1, CaseGrids())
-          & Create(KeymasterIds.VaultTpl, KeymasterIds.KeyToolTpl, "keymaster_vault", "Keymaster's Vault", "KM Vault",
+                 2, 1, ModelBundles.CasePath, CaseGrids())
+          & Create(KeymasterIds.VaultTpl, KeymasterIds.KeyCaseTpl, "keymaster_vault", "Keymaster's Vault", "KM Vault",
                  "Stores your whole key collection. Stays in the stash.",
-                 1, 1, new List<Grid> { KeyGrid(KeymasterIds.VaultTpl, "keys") });
+                 3, 2, ModelBundles.VaultPath, new List<Grid> { KeyGrid(KeymasterIds.VaultTpl, "keys") });
     if (!ok) logger.Error("Keymaster: item templates missing, the case and vault will not work");
     return Task.CompletedTask;
   }
 
-  bool Create(string id, string donor, string internalName, string name, string shortName, string description, int w, int h, List<Grid> grids)
+  bool Create(string id, string donor, string internalName, string name, string shortName, string description, int w, int h, string prefab, List<Grid> grids)
   {
     var result = customItems.CreateItemFromClone(new NewItemFromCloneDetails
     {
@@ -44,6 +44,7 @@ public class KeymasterItems(ISptLogger<KeymasterItems> logger, CustomItemService
       {
         Name = name, ShortName = shortName, Description = description,
         Width = w, Height = h, BackgroundColor = "yellow",
+        Prefab = new Prefab { Path = prefab, Rcid = "" },
         CanSellOnRagfair = false,
         Grids = grids,
       },

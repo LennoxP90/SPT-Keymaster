@@ -13,6 +13,7 @@ namespace Keymaster.Client.Wire
   {
     [JsonProperty("currentMap")] public string? CurrentMap { get; set; }
     [JsonProperty("alwaysBring")] public List<string> AlwaysBring { get; set; } = new List<string>();
+    [JsonProperty("moneyTargets")] public Dictionary<string, int> MoneyTargets { get; set; } = new Dictionary<string, int>();
   }
 
   public sealed class LearnRequestC

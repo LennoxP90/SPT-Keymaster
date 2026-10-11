@@ -48,7 +48,17 @@ namespace Keymaster.Client
 
     static bool InACase(Item i) => i.Parent?.Container?.ParentItem?.StringTemplateId == KeymasterIds.CaseTpl;
 
-    /// <summary>Every key in the case, the vault and the rest of the stash. Equipped gear other than the case is never a source.</summary>
+    /// <summary>The containers from this item up to the stash, for LoadSource. Stops at the owner root as GetAllParentItems does.</summary>
+    static IEnumerable<ContainerHop> Chain(Item i, Item stash)
+    {
+      for (var at = i.Parent; at != null && !(at is OwnerItself) && at.Container.ParentItem != stash; at = at.Container.ParentItem.CurrentAddress)
+        yield return new ContainerHop { OwnerTpl = at.Container.ParentItem.StringTemplateId, IsSlot = at.Container is Slot };
+    }
+
+    /// <summary>
+    /// Every key in the case, the vault and the rest of the stash, except keys in another mod's keychain slots.
+    /// Equipped gear other than the case is never a source.
+    /// </summary>
     public List<KeyCopy> Copies()
     {
       var list = new List<KeyCopy>();
@@ -63,11 +73,18 @@ namespace Keymaster.Client
       if (v != null) Add(v.Grids[0].Items, KeyHome.Vault);
       var skip = new HashSet<string>(list.Select(x => x.ItemId));
       if (ic.Inventory.Stash != null)
-        Add(ic.Inventory.Stash.GetAllItems().Where(i => !skip.Contains(i.Id) && !InACase(i)), KeyHome.Stash);
+        Add(ic.Inventory.Stash.GetAllItems().Where(i => !skip.Contains(i.Id) && i.GetItemComponent<KeyComponent>() != null && !InACase(i)
+          && LoadSource.IsLoadSource(Chain(i, ic.Inventory.Stash))), KeyHome.Stash);
       return list;
     }
 
-    public Task<bool> MoveToCase(string itemId) => MoveInto(itemId, Case?.Grids[0]);
+    /// <summary>Keymaster's own loads (the swap, access cards) are never held back by the pickups cap.</summary>
+    public async Task<bool> MoveToCase(string itemId)
+    {
+      UI.PickupCap.Loading.Add(itemId);
+      try { return await MoveInto(itemId, Case?.Grids[0]); }
+      finally { UI.PickupCap.Loading.Remove(itemId); }
+    }
 
     /// <summary>Vault, then the main stash grid. False means it stays where it is.</summary>
     public async Task<bool> MoveHome(string itemId)

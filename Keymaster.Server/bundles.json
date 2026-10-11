@@ -1,0 +1,12 @@
+{
+    "manifest": [
+        {
+            "key": "keymaster/km_case.bundle",
+            "dependencyKeys": ["assets/commonassets/physics/physicsmaterials.bundle", "cubemaps", "shaders"]
+        },
+        {
+            "key": "keymaster/km_vault.bundle",
+            "dependencyKeys": ["assets/commonassets/physics/physicsmaterials.bundle", "cubemaps", "shaders"]
+        }
+    ]
+}

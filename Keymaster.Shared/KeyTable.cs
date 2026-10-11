@@ -20,8 +20,12 @@ namespace Keymaster.Shared
     public static string EntryKey(string location, string? variant)
     {
       var loc = location.Trim().ToLowerInvariant();
-      return string.IsNullOrWhiteSpace(variant) ? loc : loc + "@" + variant!.Trim().ToLowerInvariant();
+      var v = variant?.Trim().ToLowerInvariant();
+      return string.IsNullOrEmpty(v) || PlainVariants.Contains(v!) ? loc : loc + "@" + v;
     }
+
+    /// <summary>MapVariants' names for the vanilla scene: learned and looked up as the base map.</summary>
+    static readonly string[] PlainVariants = { "original", "unmanaged" };
 
     static string BaseOf(string entryKey)
     {

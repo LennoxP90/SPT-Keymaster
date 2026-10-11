@@ -23,11 +23,16 @@ public class KeymasterGift(ISptLogger<KeymasterGift> logger, KeymasterServerConf
     {
       var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
       if (!GiftPolicy.ShouldSend(hasVault, s.GiftSentAt, now, GiftPolicy.StorageSeconds, config.Gift.Resend)) return false;
-      var item = new Item { Id = new MongoId(), Template = vault };
-      mail.SendSystemMessageToPlayer(sessionId, "Keymaster: your key vault. It stays in your stash.", [item], GiftPolicy.StorageSeconds);
       s.GiftSentAt = now;
       return true;
     });
-    if (sent) logger.Info($"Keymaster: vault gift sent to {pmc.Info?.Nickname}");
+    // Recorded before mailing: a write that keeps failing then sends nothing, rather than a vault per config call.
+    if (!sent) return;
+    try
+    {
+      mail.SendSystemMessageToPlayer(sessionId, "Keymaster: your key vault. It stays in your stash.", [new Item { Id = new MongoId(), Template = vault }], GiftPolicy.StorageSeconds);
+      logger.Info($"Keymaster: vault gift sent to {pmc.Info?.Nickname}");
+    }
+    catch (Exception ex) { logger.Warning($"Keymaster: vault gift recorded but not mailed to {pmc.Info?.Nickname}: {ex.Message}"); }
   }
 }

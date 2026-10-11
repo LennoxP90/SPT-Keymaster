@@ -13,6 +13,8 @@ namespace Keymaster.Server.Wire
   {
     [JsonPropertyName("currentMap")] public string? CurrentMap { get; set; }
     [JsonPropertyName("alwaysBring")] public List<string> AlwaysBring { get; set; } = new();
+    /// <summary>Currency template to the amount the case is topped up to before each raid.</summary>
+    [JsonPropertyName("moneyTargets")] public Dictionary<string, int> MoneyTargets { get; set; } = new();
   }
 
   public class LearnRequest

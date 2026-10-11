@@ -36,8 +36,9 @@ public class KeyTableService(ISptLogger<KeyTableService> logger, KeymasterStore 
       var key = KeyTable.EntryKey(req.Location, req.Variant);
       var learned = store.ReadLearned();
       var before = learned.Entries.TryGetValue(key, out var old) ? old.Keys : seed.Entries.GetValueOrDefault(key)?.Keys;
+      if (req.Keys == null || req.Keys.Count == 0) { logger.Debug($"Keymaster: ignored an empty learn for {key}"); return; }
       var keys = req.Keys.Distinct().OrderBy(k => k).ToList();
-      if (before != null && before.OrderBy(k => k).SequenceEqual(keys)) return;
+      if (!LearnPolicy.Replaces(before, keys)) return;
       learned.Entries[key] = new KeysEntry { EftBuild = req.EftBuild, Keys = keys };
       store.WriteLearned(learned);
       Rebuild();

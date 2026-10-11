@@ -6,7 +6,7 @@ namespace Keymaster.Shared
     public const string CaseTpl = "6707ed1c4b4d4b6d00000001";
     public const string VaultTpl = "6707ed1c4b4d4b6d00000002";
     public const string SiccTpl = "5d235bb686f77443f4331278";
-    public const string KeyToolTpl = "59fafd4b86f7745ca07e1232";
+    public const string KeyCaseTpl = "67d3ed3271c17ff82e0a5b0b";
     public const string TherapistId = "54cb57776803fa99248b456e";
     public const string KeyCategory = "543be5e94bdc2df1348b4568";
     public const string StashClass = "566abbb64bdc2d144c8b457d";

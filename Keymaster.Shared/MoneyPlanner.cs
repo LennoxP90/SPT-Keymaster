@@ -27,9 +27,12 @@ namespace Keymaster.Shared
 
   public static class MoneyPlanner
   {
+    /// <summary>A target is 0 to one full stack.</summary>
+    public static int ClampTarget(string currencyTpl, int target) => Math.Max(0, Math.Min(target, KeymasterIds.StackCap(currencyTpl)));
+
     public static MoneyPlan Plan(string currencyTpl, int target, int inCell, IReadOnlyList<StackRef> stashStacks)
     {
-      var goal = Math.Max(0, Math.Min(target, KeymasterIds.StackCap(currencyTpl)));
+      var goal = ClampTarget(currencyTpl, target);
       var plan = new MoneyPlan();
       if (inCell > goal) { plan.Excess = inCell - goal; return plan; }
 

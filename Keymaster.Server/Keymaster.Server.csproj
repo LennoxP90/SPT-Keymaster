@@ -82,6 +82,7 @@
 
   <ItemGroup>
     <Content Update="config\config.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="bundles.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\db\keys-seed.json" Link="db\keys-seed.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\db\keys-seed.json')" />
   </ItemGroup>
 
@@ -90,7 +91,12 @@
   </PropertyGroup>
 
   <Target Name="StageKeymasterServer" AfterTargets="Build">
-    <Copy SourceFiles="$(TargetPath);$(OutDir)$(AssemblyName).deps.json" DestinationFolder="$(KeymasterDist)" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <KeymasterModelBundle Include="$(MSBuildProjectDirectory)\..\bundles\keymaster\*.bundle" />
+    </ItemGroup>
+    <Error Text="No model bundles found in bundles/keymaster." Condition="'@(KeymasterModelBundle)' == ''" />
+    <Copy SourceFiles="$(TargetPath);$(OutDir)$(AssemblyName).deps.json;bundles.json" DestinationFolder="$(KeymasterDist)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(KeymasterModelBundle)" DestinationFolder="$(KeymasterDist)\bundles\keymaster" SkipUnchangedFiles="true" />
     <Copy SourceFiles="config\config.json" DestinationFolder="$(KeymasterDist)\config" SkipUnchangedFiles="true" />
     <Copy SourceFiles="..\db\keys-seed.json" DestinationFolder="$(KeymasterDist)\db" SkipUnchangedFiles="true" Condition="Exists('..\db\keys-seed.json')" />
   </Target>

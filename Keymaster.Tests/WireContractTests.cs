@@ -31,4 +31,16 @@ public class WireContractTests
     Assert.Equal(new[] { "k" }, c.Table["woods"]);
     Assert.Equal("woods", c.Homes["k"]);
   }
+
+  [Fact]
+  public void MoneyTargets_RoundTripBothWays()
+  {
+    var s = new Keymaster.Server.Wire.StateDto { MoneyTargets = new() { ["rub"] = 8000 } };
+    var c = Newtonsoft.Json.JsonConvert.DeserializeObject<Keymaster.Client.Wire.StateDtoC>(System.Text.Json.JsonSerializer.Serialize(s))!;
+    Assert.Equal(8000, c.MoneyTargets["rub"]);
+    c.MoneyTargets["eur"] = 1000;
+    var back = System.Text.Json.JsonSerializer.Deserialize<Keymaster.Server.Wire.StateDto>(Newtonsoft.Json.JsonConvert.SerializeObject(c))!;
+    Assert.Equal(1000, back.MoneyTargets["eur"]);
+    Assert.Equal(8000, back.MoneyTargets["rub"]);
+  }
 }

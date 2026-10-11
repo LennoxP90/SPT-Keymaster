@@ -69,3 +69,36 @@ public class VaultGroupingTests
     Assert.Equal(3, groups.Sum(g => g.Tpls.Count));
   }
 }
+
+public class MapTitleTests
+{
+  static string Name(string id) => id == "bigmap" ? "Customs" : id.StartsWith("factory4") ? "Factory" : null!;
+  static VaultGroup G(string title, params string[] tpls) => new VaultGroup { Title = title, Tpls = tpls.ToList() };
+
+  [Fact]
+  public void PlainEntry_UsesTheGamesMapName()
+  {
+    Assert.Equal("Customs", MapTitle.For("bigmap", Name));
+  }
+
+  [Fact]
+  public void VariantEntry_UsesTheBaseMapsNameOnly()
+  {
+    Assert.Equal("Factory", MapTitle.For("factory4_day@backport", Name));
+  }
+
+  [Fact]
+  public void OtherAndUnknownIds_StayAsTheyAre()
+  {
+    Assert.Equal("Other", MapTitle.For(VaultGrouping.Other, Name));
+    Assert.Equal("newmap", MapTitle.For("newmap", Name));
+  }
+
+  [Fact]
+  public void Named_MergesGroupsWithTheSameName_EachKeyOnce_InOrder()
+  {
+    var named = MapTitle.Named(new[] { G("factory4_day@backport", "a", "b"), G("bigmap", "c"), G("factory4_night", "b", "d"), G(VaultGrouping.Other, "e") }, Name);
+    Assert.Equal(new[] { "Factory", "Customs", "Other" }, named.Select(g => g.Title));
+    Assert.Equal(new[] { "a", "b", "d" }, named[0].Tpls);
+  }
+}

@@ -23,6 +23,13 @@ public class KeyTableTests
   }
 
   [Fact]
+  public void EntryKey_OriginalAndUnmanagedAreTheBaseMap()
+  {
+    Assert.Equal("factory4_day", KeyTable.EntryKey("factory4_day", "original"));
+    Assert.Equal("bigmap", KeyTable.EntryKey("bigmap", "Unmanaged"));
+  }
+
+  [Fact]
   public void Build_LearnedReplacesSeedEntry()
   {
     var seed = File(("bigmap", "0.16.9.40087", new[] { "a", "b" }));

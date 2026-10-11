@@ -1,97 +1,75 @@
+using System;
 using System.Linq;
 using EFT;
-using EFT.InventoryLogic;
 using EFT.UI;
 using EFT.UI.DragAndDrop;
+using HarmonyLib;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Keymaster.Client.UI
 {
-  /// <summary>Everything the panel draws besides EFT's item views: window, title, close button, viewport, headers and positions. Logic lives in KeymasterPanel.cs.</summary>
+  /// <summary>Everything the panel draws besides EFT's item views, in the host GridWindow's own styles. Logic lives in KeymasterPanel.cs.</summary>
   public sealed partial class KeymasterPanel
   {
-    const int HeaderHeight = 28, TitleHeight = 30, Pad = 10, MaxRows = 8;
+    const int HeaderHeight = 28, MaxView = 8 * Cell;
+    static readonly AccessTools.FieldRef<GridWindow, ContainedGridsView> WindowGrids = AccessTools.FieldRefAccess<GridWindow, ContainedGridsView>("_containedGrids");
+    static readonly Color Dim = new Color(1f, 1f, 1f, 0.35f);
+
     RectTransform _root, _content;
-    TMP_FontAsset _font;
+    TextMeshProUGUI _style;
+    Image _cellStyle;
     float _viewH;
 
-    /// <summary>The stash grid's canvas, as the spike found raycasts need; any shown grid's in a raid.</summary>
-    static Canvas ScreenCanvas(ItemUiContext ui, ItemController ic)
+    /// <summary>Takes the place of the window's (never shown) grid view; caption, close button, frame and dragging stay the window's.</summary>
+    void Build(GridWindow window)
     {
-      var stash = (ic as InventoryController)?.Inventory.Stash;
-      var grids = FindObjectsOfType<GridView>().Where(g => g.isActiveAndEnabled).ToList();
-      var grid = grids.FirstOrDefault(g => stash != null && g.Grid?.ParentItem == stash) ?? grids.FirstOrDefault();
-      return grid != null ? grid.GetComponentInParent<Canvas>() : ui.GetComponentInParent<Canvas>();
-    }
+      var grids = WindowGrids(window);
+      _style = window.Caption;
+      _cellStyle = (grids as GeneratedGridsView)?._gridViewTemplate.transform.Find("Background Tile")?.GetComponent<Image>();
+      if (window._sortPanel != null) window._sortPanel.gameObject.SetActive(false);
 
-    void Build(Canvas screen)
-    {
-      _font = screen.GetComponentInChildren<TextMeshProUGUI>(true)?.font;
       _root = (RectTransform)transform;
-      _root.SetParent(screen.rootCanvas.transform, false);
-      _root.anchorMin = _root.anchorMax = _root.pivot = new Vector2(0.5f, 0.5f);
-      _root.SetAsLastSibling();
-      GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.05f, 0.95f);
-      var canvas = gameObject.AddComponent<Canvas>();
-      canvas.overrideSorting = true;
-      canvas.sortingLayerID = screen.sortingLayerID;
-      canvas.sortingOrder = screen.sortingOrder + 1;
-      gameObject.AddComponent<GraphicRaycaster>();
-
-      var title = Text(_root, _item.ShortName.Localized(), 18);
-      Place(title.rectTransform, Pad, 0, Cols * Cell - TitleHeight, TitleHeight);
-      CloseButton();
-
-      var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
-      var vp = (RectTransform)viewport.transform;
-      vp.SetParent(_root, false);
-      vp.anchorMin = Vector2.zero;
-      vp.anchorMax = Vector2.one;
-      vp.offsetMin = new Vector2(Pad, Pad);
-      vp.offsetMax = new Vector2(-Pad, -TitleHeight);
-      viewport.GetComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+      var slot = (RectTransform)grids.transform;
+      _root.SetParent(slot.parent, false);
+      _root.SetSiblingIndex(slot.GetSiblingIndex() + 1);
+      _root.anchorMin = slot.anchorMin;
+      _root.anchorMax = slot.anchorMax;
+      _root.pivot = slot.pivot;
+      _root.anchoredPosition = slot.anchoredPosition;
+      grids.gameObject.SetActive(false);
+      GetComponent<Image>().color = Color.clear;
+      gameObject.AddComponent<LayoutElement>();
 
       _content = (RectTransform)new GameObject("Content", typeof(RectTransform)).transform;
-      _content.SetParent(vp, false);
+      _content.SetParent(_root, false);
       _content.anchorMin = _content.anchorMax = _content.pivot = new Vector2(0, 1);
-
-      var scroll = gameObject.AddComponent<ScrollRect>();
-      scroll.viewport = vp;
-      scroll.content = _content;
-      scroll.horizontal = false;
-      scroll.movementType = ScrollRect.MovementType.Clamped;
-      scroll.scrollSensitivity = Cell;
-      scroll.onValueChanged.AddListener(_ => ShowVisible());
     }
 
-    void CloseButton()
+    /// <summary>The name the map screen shows for a location id (LocationSettings.Location.LocalizedName), in the game's language.</summary>
+    static string MapName(string id)
     {
-      var go = new GameObject("Close", typeof(RectTransform), typeof(Image), typeof(Button));
-      var rt = (RectTransform)go.transform;
-      rt.SetParent(_root, false);
-      rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.one;
-      rt.anchoredPosition = new Vector2(-4, -4);
-      rt.sizeDelta = new Vector2(TitleHeight - 8, TitleHeight - 8);
-      go.GetComponent<Image>().color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
-      go.GetComponent<Button>().onClick.AddListener(Close);
-      var x = Text(rt, "X", 16);
-      x.alignment = TextAlignmentOptions.Center;
-      x.rectTransform.anchorMin = Vector2.zero;
-      x.rectTransform.anchorMax = Vector2.one;
-      x.rectTransform.offsetMin = x.rectTransform.offsetMax = Vector2.zero;
+      if (!TarkovApplication.Exist(out var app)) return null;
+      return app.Session?.LocationSettings?.locations?.Values
+        .FirstOrDefault(l => string.Equals(l.Id, id, StringComparison.OrdinalIgnoreCase))?.LocalizedName;
     }
 
-    TextMeshProUGUI Text(Transform parent, string text, float size)
+    TextMeshProUGUI Text(Transform parent, string text, float size, TextAlignmentOptions align)
     {
       var t = new GameObject("Text", typeof(RectTransform)).AddComponent<TextMeshProUGUI>();
       t.transform.SetParent(parent, false);
-      if (_font != null) t.font = _font;
+      if (_style != null)
+      {
+        t.font = _style.font;
+        t.fontSharedMaterial = _style.fontSharedMaterial;
+        t.color = _style.color;
+        t.fontStyle = _style.fontStyle;
+      }
       t.fontSize = size;
       t.text = text;
       t.raycastTarget = false;
-      t.alignment = TextAlignmentOptions.MidlineLeft;
+      t.alignment = align;
       return t;
     }
 
@@ -104,10 +82,49 @@ namespace Keymaster.Client.UI
 
     Component Header(string title, float y)
     {
-      var t = Text(_content, title, 16);
-      t.color = new Color(0.85f, 0.8f, 0.6f);
-      Place(t.rectTransform, 4, y, Cols * Cell - 4, HeaderHeight);
+      var t = Text(_content, title, _style != null ? _style.fontSize - 2 : 14, TextAlignmentOptions.BottomLeft);
+      Place(t.rectTransform, 2, y, Cols * Cell, HeaderHeight - 4);
       return t;
+    }
+
+    /// <summary>The stock grid's cell background under a row of n cells.</summary>
+    Component Cells(int n, float y)
+    {
+      var img = new GameObject("Cells", typeof(RectTransform)).AddComponent<Image>();
+      img.transform.SetParent(_content, false);
+      if (_cellStyle != null)
+      {
+        img.sprite = _cellStyle.sprite;
+        img.type = _cellStyle.type;
+        img.pixelsPerUnitMultiplier = _cellStyle.pixelsPerUnitMultiplier;
+        img.material = _cellStyle.material;
+        img.color = _cellStyle.color;
+      }
+      else img.color = new Color(1f, 1f, 1f, 0.04f);
+      Place(img.rectTransform, 0, y, n * Cell, Cell);
+      img.transform.SetAsFirstSibling();
+      return img;
+    }
+
+    /// <summary>An empty currency cell: its code and 0, dimmed. Right-click sets its target.</summary>
+    Component EmptyMoney(string tpl, string code, int col, float y)
+    {
+      var cell = new GameObject("Empty " + code, typeof(RectTransform)).AddComponent<Image>();
+      cell.transform.SetParent(_content, false);
+      cell.color = Color.clear;
+      Place(cell.rectTransform, col * Cell, y, Cell, Cell);
+      cell.gameObject.AddComponent<MoneyTarget.Cell>().Tpl = tpl;
+      var name = Text(cell.transform, code, 13, TextAlignmentOptions.TopRight);
+      var amount = Text(cell.transform, "0", 13, TextAlignmentOptions.BottomRight);
+      foreach (var t in new[] { name, amount })
+      {
+        t.color = t.color * Dim;
+        t.rectTransform.anchorMin = Vector2.zero;
+        t.rectTransform.anchorMax = Vector2.one;
+        t.rectTransform.offsetMin = new Vector2(3, 2);
+        t.rectTransform.offsetMax = new Vector2(-3, -2);
+      }
+      return cell;
     }
 
     void PlaceView(ItemView v, int col, float y)
@@ -120,11 +137,17 @@ namespace Keymaster.Client.UI
       v.gameObject.SetActive(true);
     }
 
+    void ScrollTo(float top) => _content.anchoredPosition = new Vector2(0, top);
+
     void Resize(float contentHeight)
     {
       _content.sizeDelta = new Vector2(Cols * Cell, contentHeight);
-      _viewH = Mathf.Clamp(contentHeight, Cell, MaxRows * Cell);
-      _root.sizeDelta = new Vector2(Cols * Cell + 2 * Pad, TitleHeight + _viewH + Pad);
+      _viewH = Mathf.Clamp(contentHeight, Cell, MaxView);
+      var size = new Vector2(Cols * Cell, _viewH);
+      _root.sizeDelta = size;
+      var layout = GetComponent<LayoutElement>();
+      layout.preferredWidth = layout.minWidth = size.x;
+      layout.preferredHeight = layout.minHeight = size.y;
     }
   }
 }

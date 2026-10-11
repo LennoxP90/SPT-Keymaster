@@ -34,7 +34,7 @@ public class KeymasterStore
   public StateDto Get(MongoId sessionId)
   {
     var s = ReadStates().GetValueOrDefault(sessionId.ToString()) ?? new ProfileState();
-    return new StateDto { CurrentMap = s.CurrentMap, AlwaysBring = s.AlwaysBring };
+    return new StateDto { CurrentMap = s.CurrentMap, AlwaysBring = s.AlwaysBring, MoneyTargets = s.MoneyTargets };
   }
 
   /// <summary>Read-modify-write of one profile's state under the store lock. mutate returns false to skip the write.</summary>
@@ -57,6 +57,9 @@ public class KeymasterStore
     {
       s.CurrentMap = dto.CurrentMap;
       s.AlwaysBring = dto.AlwaysBring ?? new List<string>();
+      s.MoneyTargets = (dto.MoneyTargets ?? new Dictionary<string, int>())
+        .Where(t => KeymasterIds.StackCap(t.Key) > 0)
+        .ToDictionary(t => t.Key, t => MoneyPlanner.ClampTarget(t.Key, t.Value));
       return true;
     });
     return Get(sessionId);
@@ -86,5 +89,6 @@ public class ProfileState
 {
   [JsonPropertyName("currentMap")] public string? CurrentMap { get; set; }
   [JsonPropertyName("alwaysBring")] public List<string> AlwaysBring { get; set; } = new();
+  [JsonPropertyName("moneyTargets")] public Dictionary<string, int> MoneyTargets { get; set; } = new();
   [JsonPropertyName("giftSentAt")] public long? GiftSentAt { get; set; }
 }

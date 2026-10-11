@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -34,5 +35,24 @@ namespace Keymaster.Shared
       if (remaining.Count > 0) groups.Add(new VaultGroup { Title = Other, Tpls = list.Where(remaining.Contains).ToList() });
       return groups;
     }
+  }
+
+  /// <summary>Vault headers: the game's own map name for each entry; a variant shows its base map's name.</summary>
+  public static class MapTitle
+  {
+    /// <param name="mapName">The game's localized name for a location id, or null when it has none.</param>
+    public static string For(string entry, Func<string, string?> mapName)
+    {
+      if (entry == VaultGrouping.Other) return entry;
+      var at = entry.IndexOf('@');
+      var id = at < 0 ? entry : entry.Substring(0, at);
+      return mapName(id) ?? id;
+    }
+
+    /// <summary>Groups renamed for display; groups that end up with the same name merge, in first-seen order, each key once.</summary>
+    public static List<VaultGroup> Named(IEnumerable<VaultGroup> groups, Func<string, string?> mapName) =>
+      groups.GroupBy(g => For(g.Title, mapName))
+        .Select(n => new VaultGroup { Title = n.Key, Tpls = n.SelectMany(g => g.Tpls).Distinct().ToList() })
+        .ToList();
   }
 }

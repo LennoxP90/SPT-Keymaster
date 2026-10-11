@@ -13,7 +13,7 @@ namespace Keymaster.Client
   public static class Swapper
   {
     /// <summary>accessKeys: the location's own access cards, always wanted whatever the key table holds.</summary>
-    public static async Task<string> Run(InventoryAdapter a, string location, string variant, IEnumerable<string> accessKeys)
+    public static async Task<(string Line, bool Warn)> Run(InventoryAdapter a, string location, string variant, IEnumerable<string> accessKeys)
     {
       var entry = KeyTable.EntryKey(location, variant);
       var keys = KeyTable.Resolve(KeymasterApi.Table, location, variant);
@@ -40,7 +40,7 @@ namespace Keymaster.Client
 
       KeymasterApi.State.CurrentMap = entry;
       KeymasterApi.SaveState();
-      return $"{entry} {plan.Present + loaded}/{plan.Wanted} keys" + (failed > 0 ? $", {failed} moves skipped" : "") + money;
+      return ($"{entry} {plan.Present + loaded}/{plan.Wanted} keys" + (failed > 0 ? $", {failed} moves skipped" : "") + money, failed > 0);
     }
 
     internal static string Code(string tpl) => tpl == KeymasterIds.Rub ? "RUB" : tpl == KeymasterIds.Usd ? "USD" : tpl == KeymasterIds.Eur ? "EUR" : "GP";
@@ -91,13 +91,14 @@ namespace Keymaster.Client
       return flushed;
     }
 
-    /// <summary>A gated map never starts without its card worn: the throw takes the game's HandleError path back to the menu.</summary>
+    /// <summary>A gated map never starts without its card worn, at the level the map screen asks for one: the throw takes the game's HandleError path back to the menu.</summary>
     static void RequireAccessCard()
     {
       if (!TarkovApplication.Exist(out var app)) return;
       var location = app.CurrentRaidSettings.SelectedLocation;
       var cards = AccessKeys(location);
-      if (cards.Length == 0 || Swapper.MenuInventory(app)?.Wears(cards) != false) return;
+      var worn = Swapper.MenuInventory(app)?.Wears(cards) != false;
+      if (!AccessGate.MustBlock(cards.Length, app.Session.Profile.Info.Level, location.MinPlayerLvlAccessKeys, worn)) return;
       Plugin.Warn($"{location.Id}: its access card could not be loaded; back to the menu");
       throw new System.Exception("Keymaster: no access card for " + location.Id);
     }
@@ -110,7 +111,7 @@ namespace Keymaster.Client
       var a = Swapper.MenuInventory(app);
       if (a?.Case == null) return;
       KeymasterApi.Refresh();
-      Plugin.Log(await Swapper.Run(a, app.CurrentRaidSettings.SelectedLocation.Id, LearnPatch.MapVariant(), AccessKeys(app.CurrentRaidSettings.SelectedLocation)));
+      Plugin.Report(await Swapper.Run(a, app.CurrentRaidSettings.SelectedLocation.Id, LearnPatch.MapVariant(), AccessKeys(app.CurrentRaidSettings.SelectedLocation)));
     }
   }
 }
