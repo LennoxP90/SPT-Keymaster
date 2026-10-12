@@ -64,6 +64,11 @@ namespace Keymaster.Client.UI
       if (template == null) { Plugin.Detail("panel: no stock scrollbar found, wheel only"); return null; }
       var bar = Instantiate(template.gameObject, _root, false).GetComponent<Scrollbar>();
       bar.name = "Scrollbar";
+      // The window's own bar is hidden while its grid fits; the copy carries that state, so show every part of it.
+      foreach (var part in bar.GetComponentsInChildren<Transform>(true)) if (part != bar.transform) part.gameObject.SetActive(true);
+      foreach (var g in bar.GetComponentsInChildren<Graphic>(true)) { g.enabled = true; g.canvasRenderer.SetAlpha(1f); }
+      foreach (var cg in bar.GetComponentsInChildren<CanvasGroup>(true)) { cg.alpha = 1f; cg.interactable = cg.blocksRaycasts = true; }
+      Plugin.Detail("panel: scroll bar copied from " + template.transform.parent?.name + "/" + template.name);
       bar.onValueChanged = new Scrollbar.ScrollEvent();
       bar.onValueChanged.AddListener(v => OnBar(FromTop(bar, v)));
       bar.numberOfSteps = 0;
