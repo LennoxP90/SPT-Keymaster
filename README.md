@@ -18,6 +18,9 @@ Both open in a scrollable panel that shows only what they hold.
   One of each per profile.
 - Start a PMC raid: the case is loaded with that map's keys (vault first, then stash) and your money targets.
   Access cards move in when you press Ready at the map screen. Back at the menu, spares go home on their own.
+- Take a transit to another map: the case is swapped for the next map's keys and its transit cards, and the last
+  map's keys go back to the vault. Money is left as it is. Without the next map's card the game refuses the transit
+  as usual.
 - Right click: **Set target** on a money stack in the case, **Dump excess** on the case, **Bring on every map** on
   a key.
 - Ctrl+click or drag money and keys into an open case or vault window. Money is capped at the game's raid-entry

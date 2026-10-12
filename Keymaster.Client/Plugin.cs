@@ -6,7 +6,7 @@ using Keymaster.Shared;
 
 namespace Keymaster.Client
 {
-  [BepInPlugin("com.lennoxp90.keymaster", "Keymaster", "1.0.0")]
+  [BepInPlugin("com.lennoxp90.keymaster", "Keymaster", "1.1.0")]
   [BepInDependency(FikaHeadlessGuid, BepInDependency.DependencyFlags.SoftDependency)]
   public class Plugin : BaseUnityPlugin
   {
