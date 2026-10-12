@@ -58,10 +58,11 @@ namespace Keymaster.Client
     protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(TarkovApplication), nameof(TarkovApplication.OnGameEnd));
 
     [PatchPrefix]
-    static void Prefix(JsonType.LocationSettings.Location location)
+    static void Prefix(TarkovApplication __instance, JsonType.LocationSettings.Location location)
     {
       var id = location?.Id;
-      EndedOn = string.IsNullOrEmpty(id) || id == "hideout" ? null : id;
+      // A transit reloads no menu: the server already swapped the case for the next map.
+      EndedOn = string.IsNullOrEmpty(id) || id == "hideout" || __instance.transitionStatus.InTransition ? null : id;
     }
   }
 

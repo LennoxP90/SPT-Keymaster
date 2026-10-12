@@ -1,3 +1,4 @@
+using System.Linq;
 using Keymaster.Shared;
 using Xunit;
 
@@ -42,6 +43,20 @@ public class LoadPlannerTests
     var copies = new[] { C("c1", "old", 5, KeyHome.Case), C("c2", "a", 5, KeyHome.Case) };
     var plan = LoadPlanner.Plan(new[] { "a" }, copies, CopyChoice.Freshest, mapChanged: true);
     Assert.Equal(new[] { "c1" }, plan.ToHome);
+  }
+
+  [Fact]
+  public void Transit_CustomsToFactory_SendsCustomsKeysHome_LoadsFactoryKeysAndLabsCard()
+  {
+    var copies = new[]
+    {
+      C("cust", "customsKey", 5, KeyHome.Case),
+      C("fac", "factoryKey", 5, KeyHome.Vault),
+      C("labs", "labsCard", 1, KeyHome.Vault),
+    };
+    var plan = LoadPlanner.Plan(new[] { "factoryKey", "labsCard" }, copies, CopyChoice.Freshest, mapChanged: true);
+    Assert.Equal(new[] { "cust" }, plan.ToHome);
+    Assert.Equal(new[] { "fac", "labs" }, plan.ToCase.OrderBy(x => x).ToArray());
   }
 
   [Fact]
