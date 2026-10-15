@@ -90,7 +90,7 @@ public class KeymasterOneOfEach(ISptLogger<KeymasterOneOfEach> logger, HttpRespo
   {
     var list = items?.ToList() ?? [];
     var ids = new HashSet<MongoId> { root };
-    // ponytail: rescans until no new child, fine for a mail or a scav backpack.
+    // rescans until no new child, fine for a mail or a scav backpack.
     while (true)
     {
       var added = list.Where(i => i.ParentId is { } p && ids.Contains(new MongoId(p)) && ids.Add(i.Id)).Count();

@@ -21,6 +21,7 @@ namespace Keymaster.Client
       if (!KeymasterApi.Refresh(initial: true)) { Log("server half not found; Keymaster is off"); return; }
       new LearnPatch().Enable();
       new ArmPatch().Enable();
+      new CaseRiskPatch().Enable();
       new FlushPatch().Enable();
       new GameEndPatch().Enable();
       new MenuBackPatch().Enable();
@@ -47,10 +48,13 @@ namespace Keymaster.Client
   {
     public static ConfigEntry<CopyChoice> Copy;
     public static ConfigEntry<bool> Verbose;
+    public static ConfigEntry<bool> LiveDangerously;
 
     public static void Bind(ConfigFile c)
     {
       Copy = c.Bind("Keys", "Key copy", CopyChoice.Freshest, "Which copy goes into the case when you own several");
+      LiveDangerously = c.Bind("Keys", "I like to live dangerously", false,
+        "No warning when the KM Case goes on your PMC outside the secure container. Out there a death loses the case with every key and all the money in it");
       Verbose = c.Bind("Debug", "Verbose logging", false, "One log line per moved item");
     }
 

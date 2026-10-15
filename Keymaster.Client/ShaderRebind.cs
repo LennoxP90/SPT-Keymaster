@@ -95,7 +95,7 @@ namespace Keymaster.Client
       else if (_gameCube == null) Plugin.Warn($"cubemap {DonorCube} not found after {MaxLookups} lookups; the case and vault render without reflections");
     }
 
-    // ponytail: another mod's full compiled copy of this shader would also pass the pass count; the lowest instance id
+    // another mod's full compiled copy of this shader would also pass the pass count; the lowest instance id
     // (loaded first, i.e. the game's own bundle at startup) wins. Match on the source bundle if that ever bites.
     static Shader LoadedShader() =>
       Resources.FindObjectsOfTypeAll<Shader>()

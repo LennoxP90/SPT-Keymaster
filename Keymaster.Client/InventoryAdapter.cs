@@ -32,8 +32,16 @@ namespace Keymaster.Client
       }
     }
 
-    public CompoundItem Case => ic.Inventory.Equipment.GetSlot(EquipmentSlot.SecuredContainer).ContainedItem?
-      .GetAllItems().OfType<CompoundItem>().FirstOrDefault(i => i.StringTemplateId == KeymasterIds.CaseTpl);
+    /// <summary>The case anywhere on the PMC, as the server's transit finds it.</summary>
+    public CompoundItem Case => ic.Inventory.GetPlayerItems(EPlayerItems.Equipment).OfType<CompoundItem>()
+      .FirstOrDefault(i => i.StringTemplateId == KeymasterIds.CaseTpl);
+
+    /// <summary>On the PMC but not in the secure container.</summary>
+    public static bool AtRisk(Inventory inv, Item item)
+    {
+      var sc = inv.Equipment.GetSlot(EquipmentSlot.SecuredContainer).ContainedItem;
+      return item.IsChildOf(inv.Equipment) && (sc == null || !item.IsChildOf(sc));
+    }
 
     public CompoundItem Vault => ic.Inventory.Stash?.GetAllItems().OfType<CompoundItem>().FirstOrDefault(i => i.StringTemplateId == KeymasterIds.VaultTpl);
 

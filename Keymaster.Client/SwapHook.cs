@@ -6,6 +6,7 @@ using Comfort.Common;
 using EFT;
 using HarmonyLib;
 using Keymaster.Shared;
+using EFT.InventoryLogic;
 using SPT.Reflection.Patching;
 
 namespace Keymaster.Client
@@ -49,6 +50,35 @@ namespace Keymaster.Client
     {
       var menu = AccessTools.Field(typeof(TarkovApplication), "_menuOperation").GetValue(app) as MainMenuShowOperation;
       return InventoryAdapter.For(menu?.InventoryController);
+    }
+  }
+
+  /// <summary>Warns when the case is put on the PMC outside the secure container, where a death loses it.</summary>
+  public class CaseRiskPatch : ModulePatch
+  {
+    const string Risk = "KM Case is not in your secure container: if you die, you lose it with every key and all the money in it";
+
+    protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(ItemController), nameof(ItemController.SafeAddItemEventInvoke));
+
+    /// <summary>The container the case last landed in; a move inside it is not a new placement.</summary>
+    // the event carries only the destination, so the first move after launch counts as a switch.
+    static string lastContainer;
+
+    [PatchPostfix]
+    static void Postfix(ItemController __instance, AddItemEventArgs obj)
+    {
+      // Fika raises this for every player's controller; only our own case counts.
+      if (obj.Status != CommandStatus.Succeed || obj.Item?.StringTemplateId != KeymasterIds.CaseTpl
+          || !TarkovApplication.Exist(out var app) || __instance.ID != app.Session.Profile.Id) return;
+      var container = obj.To?.Container?.ParentItem?.Id;
+      var switched = container != lastContainer;
+      lastContainer = container;
+      if (switched && !KeymasterSettings.LiveDangerously.Value
+          && __instance is InventoryController ic && InventoryAdapter.AtRisk(ic.Inventory, obj.Item))
+      {
+        Plugin.Detail(Risk);
+        EFT.Communications.NotificationManager.DisplayWarningNotification(Risk);
+      }
     }
   }
 
