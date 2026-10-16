@@ -4,7 +4,7 @@ I got tired of digging through a key tool before every raid, so I made the keys 
 
 Keymaster adds two items:
 
-- **KM Case** sits in your secure container. Before each PMC raid it is loaded with the keys for the map you are
+- **KM Case** rides on your PMC, best in your secure container. Before each PMC raid it is loaded with the keys for the map you are
   about to play, plus the amount of each currency you set. After the raid, spare keys and excess money go back to
   your stash on their own.
 - **KM Vault** is a stash item that holds your whole key collection, grouped by the map each key belongs to.
@@ -13,8 +13,9 @@ Both open in a scrollable panel that shows only what they hold.
 
 ## How to use
 
-- Buy the **KM Case** from Therapist at loyalty level 1 (2,000,000 roubles by default) and put it in your secure
-  container. The **KM Vault** arrives in your mail on first login; keep it in your stash and put your keys in it.
+- Buy the **KM Case** from Therapist at loyalty level 1 (2,000,000 roubles by default) and put it on your PMC.
+  The secure container is the safe place: anywhere else a death loses the case with its keys and money, and the game
+  warns you when you put it there (F12, `I like to live dangerously`, turns that off). The **KM Vault** arrives in your mail on first login; keep it in your stash and put your keys in it.
   One of each per profile.
 - Start a PMC raid: the case is loaded with that map's keys (vault first, then stash) and your money targets.
   Access cards move in when you press Ready at the map screen. Back at the menu, spares go home on their own.
